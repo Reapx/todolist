@@ -8,16 +8,22 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import Modal from "./Modal.tsx";
+import TodoForm from "./TodoForm.tsx";
+import { Category } from "../util/types/category.ts";
+import { isColorDark } from "../util/functions/color.ts";
 import { useTodoContext } from "../util/functions/useTodoContext.ts";
 
-export default function TodoList() {
-  const [todoItems, setTodoItems] = useState<TodoItemType[]>([]);
+export default function TodoList({ category }: { category: Category }) {
+  const { categories, updateTodos } = useTodoContext();
+  const [todoItems, setTodoItems] = useState<TodoItemType[]>(
+    categories.find((c) => c.id === category.id)?.items || [],
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { todos, updateTodos } = useTodoContext();
 
   useEffect(() => {
-    setTodoItems(todos);
-  }, [todos]);
+    setTodoItems(categories.find((c) => c.id === category.id)?.items || []);
+  }, [categories]);
+
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
@@ -37,40 +43,91 @@ export default function TodoList() {
     const [reorderedItem] = items.splice(source.index, 1);
     items.splice(destination.index, 0, reorderedItem);
 
-    updateTodos(items.map((item, index) => ({ ...item, orderIndex: index })));
+    category.items = category.items = items.map((item, index) => ({
+      ...item,
+      orderIndex: index,
+    }));
+    const updatedCategories: Category[] = categories.map((c) => {
+      let newCategory = { ...c };
+
+      if (c.id === category.id) {
+        newCategory = category;
+      }
+
+      return newCategory;
+    });
+
+    updateTodos(updatedCategories);
+  };
+
+  const handleDelete = () => {
+    updateTodos(categories.filter((i) => i.id !== category.id));
   };
 
   return (
     <>
-      <div className="w-96 grid gap-y-2">
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="todos">
-            {(provided) => (
-              <div
-                className="grid gap-y-2"
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-              >
-                {todoItems.map((item, index) => (
-                  <Draggable key={item.id} draggableId={item.id} index={index}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                      >
-                        <TodoItem item={item} />
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+      <div className="min-w-96 max-h-screen overflow-y-scroll">
         <div
-          className="p-6 rounded shadow bg-gray-200 flex gap-2 text-gray-600 select-none cursor-pointer"
+          className={`p-6 rounded shadow flex gap-2 text-gray-600 select-none h-20`}
+          style={{ backgroundColor: category.color }}
+        >
+          <h1
+            className={`text-xl font-bold ${isColorDark(category.color) ? "text-gray-200" : "text-gray-800"} w-full`}
+          >
+            {category.name}
+          </h1>
+          <button onClick={handleDelete}>
+            <svg
+              className={`w-5 h-5 ${isColorDark(category.color) ? "text-gray-200" : "text-gray-800"}`}
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"
+              />
+            </svg>
+          </button>
+        </div>
+        <div className={`${todoItems.length > 0 && "mt-2"}`}>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId={category.id}>
+              {(provided) => (
+                <div
+                  className="grid gap-y-2"
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                >
+                  {todoItems.map((item, index) => (
+                    <Draggable
+                      key={item.id}
+                      draggableId={item.id}
+                      index={index}
+                    >
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                        >
+                          <TodoItem item={item} categoryId={category.id} />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </div>
+        <div
+          className="p-6 rounded shadow bg-gray-200 flex gap-2 text-gray-600 select-none cursor-pointer h-16 items-center mt-2"
           onClick={openModal}
         >
           <svg
@@ -91,12 +148,9 @@ export default function TodoList() {
           <p>Create a new Todo Entry</p>
         </div>
       </div>
-      <Modal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        title={"New Todo"}
-        item={null}
-      />
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={"New Todo"}>
+        <TodoForm item={null} onClose={closeModal} categoryId={category.id} />
+      </Modal>
     </>
   );
 }

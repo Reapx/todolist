@@ -7,8 +7,3 @@ export type TodoItemType = {
   finished_at: string | null;
   orderIndex: number;
 };
-
-export type TodoContextType = {
-  todos: TodoItemType[];
-  updateTodos: (newTodoItemList: TodoItemType[]) => void;
-};

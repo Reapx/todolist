@@ -1,18 +1,20 @@
 import { ReactNode, useState } from "react";
-import { TodoItemType } from "../util/types/todo";
 import { TodoContext } from "../util/functions/todoContext";
+import { Category } from "../util/types/category.ts";
 
 export default function TodoProvider({ children }: { children: ReactNode }) {
-  const initialTodos = JSON.parse(localStorage.getItem("todoItems") || "[]");
-  const [todos, setTodos] = useState<TodoItemType[]>(initialTodos);
+  const initialCategories = JSON.parse(
+    localStorage.getItem("categories") || "[]",
+  );
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
 
-  const updateTodos = (newTodoItemList: TodoItemType[]) => {
-    setTodos(newTodoItemList);
-    localStorage.setItem("todoItems", JSON.stringify(newTodoItemList));
+  const updateTodos = (data: Category[]) => {
+    setCategories(data);
+    localStorage.setItem("categories", JSON.stringify(data));
   };
 
   return (
-    <TodoContext.Provider value={{ todos, updateTodos }}>
+    <TodoContext.Provider value={{ categories: categories, updateTodos }}>
       {children}
     </TodoContext.Provider>
   );

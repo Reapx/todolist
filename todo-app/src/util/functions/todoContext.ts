@@ -1,8 +1,8 @@
 import { createContext } from "react";
-import { TodoContextType } from "../types/todo.ts";
+import { TodoContextType } from "../types/category.ts";
 
 export const TodoContext = createContext<TodoContextType>({
-  todos: JSON.parse(localStorage.getItem("todoItems") || "[]"),
+  categories: JSON.parse(localStorage.getItem("categories") || "[]"),
   updateTodos: () => {
     console.warn("updateTodos function not initialized");
   },

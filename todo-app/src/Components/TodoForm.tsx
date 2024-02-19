@@ -2,13 +2,16 @@ import { TodoItemType } from "../util/types/todo.ts";
 import { useState } from "react";
 import { v4 as uuIdV4 } from "uuid";
 import { useTodoContext } from "../util/functions/useTodoContext.ts";
+import { Category } from "../util/types/category.ts";
 
 export default function TodoForm({
   item,
   onClose,
+  categoryId,
 }: {
   item: TodoItemType | null;
   onClose: () => void;
+  categoryId: string;
 }) {
   const [title, setTitle] = useState(item?.title || "");
   const [description, setDescription] = useState(item?.description || "");
@@ -17,19 +20,24 @@ export default function TodoForm({
       new Date(item.required_at).toISOString().slice(0, 16)) ||
       "",
   );
-  const { todos, updateTodos } = useTodoContext();
+  const { categories, updateTodos } = useTodoContext();
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if ((!title && title.length > 0) || (!requiredAt && requiredAt.length > 0))
       return;
 
-    const isUpdating = item && todos.some((todo) => todo.id === item.id);
+    const selectedCategory = categories.find(
+      (category) => category.id === categoryId,
+    );
 
-    let updatedTodos = [];
+    if (!selectedCategory) return;
+    const isUpdating =
+      item && selectedCategory.items.some((todo) => todo.id === item.id);
+
+    let updatedTodos: TodoItemType[] = [];
     if (isUpdating) {
-      // Update the existing item
-      updatedTodos = todos.map((todo) =>
+      updatedTodos = selectedCategory.items.map((todo) =>
         todo.id === item!.id
           ? {
               ...todo,
@@ -48,13 +56,27 @@ export default function TodoForm({
         required_at: new Date(requiredAt).toISOString(),
         finished_at: null,
         orderIndex:
-          todos.reduce((max, todo) => Math.max(max, todo.orderIndex), 0) + 1,
+          selectedCategory.items.reduce(
+            (max, todo) => Math.max(max, todo.orderIndex),
+            0,
+          ) + 1,
       };
 
-      updatedTodos = [...todos, newItem];
+      updatedTodos = [...selectedCategory.items, newItem];
     }
 
-    updateTodos(updatedTodos);
+    const updatedCategories: Category[] = categories.map((c) => {
+      const newCategory = { ...c };
+
+      if (c.id === selectedCategory.id) {
+        newCategory.items = updatedTodos;
+      }
+
+      return newCategory;
+    });
+
+    updateTodos(updatedCategories);
+    setTitle("");
     onClose();
   };
 

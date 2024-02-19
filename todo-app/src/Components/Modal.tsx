@@ -1,16 +1,13 @@
-import { TodoItemType } from "../util/types/todo.ts";
-import TodoForm from "./TodoForm.tsx";
-
 export default function Modal({
   isOpen,
   onClose,
   title,
-  item,
+  children,
 }: {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  item: TodoItemType | null;
+  children: React.ReactNode;
 }) {
   if (!isOpen) return null;
 
@@ -37,9 +34,7 @@ export default function Modal({
             </svg>
           </button>
         </div>
-        <div>
-          <TodoForm item={item} onClose={onClose} />
-        </div>
+        <div>{children}</div>
       </div>
     </div>
   );

@@ -2,39 +2,105 @@ import { TodoItemType } from "../util/types/todo.ts";
 import Modal from "./Modal.tsx";
 import { useState } from "react";
 import { useTodoContext } from "../util/functions/useTodoContext.ts";
+import TodoForm from "./TodoForm.tsx";
+import { Category } from "../util/types/category.ts";
+import { convertDate } from "../util/functions/date.ts";
 
-export default function TodoItem({ item }: { item: TodoItemType }) {
+export default function TodoItem({
+  item,
+  categoryId,
+}: {
+  item: TodoItemType;
+  categoryId: string;
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { todos, updateTodos } = useTodoContext();
+  const { categories, updateTodos } = useTodoContext();
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
   const handleDelete = () => {
-    const newTodoList = todos.filter((i) => i.id !== item.id);
-    updateTodos(newTodoList);
+    const selectedCategory = categories.find(
+      (category) => category.id === categoryId,
+    );
+
+    if (!selectedCategory) return;
+
+    selectedCategory.items = selectedCategory.items.filter(
+      (i) => i.id !== item.id,
+    );
+
+    const updatedCategories: Category[] = categories.map((c) => {
+      let newCategory = { ...c };
+
+      if (c.id === selectedCategory.id) {
+        newCategory = selectedCategory;
+      }
+
+      return newCategory;
+    });
+
+    updateTodos(updatedCategories);
+  };
+
+  const handleCheckboxClick = () => {
+    const selectedCategory = categories.find(
+      (category) => category.id === categoryId,
+    );
+
+    let finished: string | null;
+    if (item.finished_at !== null) {
+      finished = null;
+    } else {
+      finished = new Date().toISOString();
+    }
+
+    if (!selectedCategory) return;
+    const updatedItem = selectedCategory.items.map((todo) =>
+      todo.id === item!.id
+        ? {
+            ...todo,
+            finished_at: finished,
+          }
+        : todo,
+    );
+
+    const updatedCategories: Category[] = categories.map((c) => {
+      const newCategory = { ...c };
+
+      if (c.id === selectedCategory.id) {
+        newCategory.items = updatedItem;
+      }
+
+      return newCategory;
+    });
+
+    updateTodos(updatedCategories);
   };
 
   return (
     <>
       <div
-        className={`p-6 rounded shadow ${item.finished_at ? "bg-gray-100" : "bg-gray-200"} flex select-none gap-x-4`}
+        className={`p-6 rounded shadow ${new Date(item.required_at) < new Date() ? "bg-red-100" : item.finished_at ? "bg-green-100" : "bg-gray-200"} flex select-none gap-x-4`}
       >
         <div className="flex items-center">
           <input
             id={`checkbox-${item.id}`}
             type="checkbox"
-            checked={!!item.finished_at || undefined}
-            disabled={!!item.finished_at}
+            checked={item.finished_at !== null}
+            onChange={handleCheckboxClick}
             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
           />
         </div>
         <div className="flex flex-col flex-grow gap-y-1">
-          <h1
-            className={`text-xl font-bold text-gray-800 ${item.description && "border-b border-gray-300"} w-full`}
+          <div
+            className={`flex justify-between ${item.description && "border-b border-gray-300"} w-full`}
           >
-            {item.title}
-          </h1>
+            <h1 className="text-xl font-bold text-gray-800">{item.title}</h1>
+            <p className="text-gray-600 text-sm">
+              {convertDate(item.required_at)}
+            </p>
+          </div>
           <p className="text-gray-600 text-sm">{item?.description}</p>
         </div>
         <div className="border-s border-gray-300 ps-2 flex flex-col items-center justify-center">
@@ -82,8 +148,9 @@ export default function TodoItem({ item }: { item: TodoItemType }) {
         isOpen={isModalOpen}
         onClose={closeModal}
         title={`Edit ${item.title}`}
-        item={item}
-      />
+      >
+        <TodoForm item={item} onClose={closeModal} categoryId={categoryId} />
+      </Modal>
     </>
   );
 }
